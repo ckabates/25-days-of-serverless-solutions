@@ -1,0 +1,565 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "metadata": {
+        "description": "Name of the Logic App."
+      }
+    },
+    "logicAppLocation": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "eastasia",
+        "southeastasia",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "westus",
+        "northcentralus",
+        "southcentralus",
+        "northeurope",
+        "westeurope",
+        "japanwest",
+        "japaneast",
+        "brazilsouth",
+        "australiaeast",
+        "australiasoutheast",
+        "southindia",
+        "centralindia",
+        "westindia",
+        "canadacentral",
+        "canadaeast",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westus2",
+        "koreacentral",
+        "koreasouth",
+        "francecentral",
+        "francesouth",
+        "southafricanorth",
+        "southafricawest"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24
+    },
+    "azureblob_Template_Connection_Name": {
+      "type": "string",
+      "defaultValue": "azureblob"
+    },
+    "azureblob_Template_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "blobstorageconnection"
+    },
+    "twitter_Connection_Name": {
+      "type": "string",
+      "defaultValue": "twitter"
+    },
+    "twitter_Connection_DisplayName": {
+      "type": "string",
+      "defaultValue": "twitterconnection"
+    }
+  },
+  "resources": [
+    {
+      "name": "[parameters('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "location": "[parameters('logicAppLocation')]",
+      "tags": {
+        "displayName": "LogicApp"
+      },
+      "apiVersion": "2017-07-01",
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Get_Template_Content": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureblob']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent('JTJmJTI0d2ViJTJmdGVtcGxhdGUudHh0'))}/content",
+                "queries": {
+                  "inferContentType": true
+                }
+              },
+              "runAfter": {},
+              "metadata": {
+                "JTJmJTI0d2ViJTJmdGVtcGxhdGUudHh0": "/$web/template.txt"
+              }
+            },
+            "Initialize_templateHtml": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "templateHtml",
+                    "type": "String",
+                    "value": "@{body('Get_Template_Content')}"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Get_Template_Content": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Initialize_dateIdentifier": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "dateIdentifier",
+                    "type": "String",
+                    "value": "@{formatDateTime(utcNow(),'yyyyMMdd')}"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Initialize_templateHtml": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Initialize_tweetHtml": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "tweetHtml",
+                    "type": "String"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Initialize_dateIdentifier": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Search_tweets": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['twitter']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/searchtweets",
+                "queries": {
+                  "searchQuery": "#dailydeals -filter:nativeretweets since:@{formatDateTime(utcNow(),'yyyy-MM-dd')} until:@{formatDateTime(addDays(utcNow(),1),'yyyy-MM-dd')}",
+                  "maxResults": 40
+                }
+              },
+              "runAfter": {
+                "Initialize_tweetHtml": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Twitter_Response": {
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@body('Search_tweets')",
+                "schema": {
+                  "items": {
+                    "properties": {
+                      "CreatedAt": {
+                        "type": "string"
+                      },
+                      "CreatedAtIso": {
+                        "type": "string"
+                      },
+                      "Favorited": {
+                        "type": "boolean"
+                      },
+                      "MediaUrls": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "OriginalTweet": {},
+                      "RetweetCount": {
+                        "type": "integer"
+                      },
+                      "TweetId": {
+                        "type": "string"
+                      },
+                      "TweetInReplyToUserId": {
+                        "type": "string"
+                      },
+                      "TweetLanguageCode": {
+                        "type": "string"
+                      },
+                      "TweetText": {
+                        "type": "string"
+                      },
+                      "TweetedBy": {
+                        "type": "string"
+                      },
+                      "UserDetails": {
+                        "properties": {
+                          "Description": {
+                            "type": "string"
+                          },
+                          "FavouritesCount": {
+                            "type": "integer"
+                          },
+                          "FollowersCount": {
+                            "type": "integer"
+                          },
+                          "FriendsCount": {
+                            "type": "integer"
+                          },
+                          "FullName": {
+                            "type": "string"
+                          },
+                          "Id": {
+                            "type": "integer"
+                          },
+                          "Location": {
+                            "type": "string"
+                          },
+                          "ProfileImageUrl": {
+                            "type": "string"
+                          },
+                          "StatusesCount": {
+                            "type": "integer"
+                          },
+                          "UserName": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "UserMentions": {
+                        "type": "array"
+                      }
+                    },
+                    "required": [
+                      "TweetText",
+                      "TweetId",
+                      "CreatedAt",
+                      "CreatedAtIso",
+                      "RetweetCount",
+                      "TweetedBy",
+                      "MediaUrls",
+                      "TweetLanguageCode",
+                      "TweetInReplyToUserId",
+                      "Favorited",
+                      "UserMentions",
+                      "OriginalTweet",
+                      "UserDetails"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "runAfter": {
+                "Search_tweets": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "For_each": {
+              "type": "Foreach",
+              "foreach": "@body('Twitter_Response')",
+              "actions": {
+                "Append_to_tweetHtml": {
+                  "type": "AppendToStringVariable",
+                  "inputs": {
+                    "name": "tweetHtml",
+                    "value": "<div class=\"card\"><div class=\"card-body\"><h5 class=\"card-title text-left\">@{items('For_each')['TweetedBy']}</h5><p class=\"card-text text-justify\">@{items('For_each')['TweetText']}</p></div></div>"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "Twitter_Response": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Initialize_htmlOutput": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "htmlOutput",
+                    "type": "String",
+                    "value": "@{replace(variables('templateHtml'), '<!-- Body Content -->', variables('tweetHtml'))}"
+                  }
+                ]
+              },
+              "runAfter": {
+                "For_each": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Create_html_file": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureblob']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "body": "@replace(variables('htmlOutput'),'[DealDate]', formatDateTime(utcNow(),'dd-MM-yyyy'))",
+                "headers": {
+                  "Content-Type": "text/html; charset=utf-8"
+                },
+                "path": "/datasets/default/files",
+                "queries": {
+                  "folderPath": "/$web",
+                  "name": "@{variables('dateIdentifier')}.html",
+                  "queryParametersSingleEncoded": true
+                }
+              },
+              "runAfter": {
+                "Initialize_htmlOutput": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "contentTransfer": {
+                  "transferMode": "Chunked"
+                }
+              }
+            },
+            "Load_Index_Page": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureblob']['connectionId']"
+                  }
+                },
+                "method": "get",
+                "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent('JTJmJTI0d2ViJTJmaW5kZXguaHRtbA=='))}/content",
+                "queries": {
+                  "inferContentType": true
+                }
+              },
+              "runAfter": {},
+              "metadata": {
+                "JTJmJTI0d2ViJTJmaW5kZXguaHRtbA==": "/$web/index.html"
+              }
+            },
+            "Initialize_indexContent": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "indexContent",
+                    "type": "String",
+                    "value": "<a href='@{formatDateTime(utcNow(),'yyyyMMdd')}.html'><li class='list-group-item list-group-item-action'>@{formatDateTime(utcNow(),'dd-MM-yyyy')}</li></a></ul><!--EndContent-->"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Load_Index_Page": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Initialize_indexHtml": {
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "indexHtml",
+                    "type": "String",
+                    "value": "@{replace(body('Load_Index_Page'),'</ul><!--EndContent-->',variables('indexContent'))}"
+                  }
+                ]
+              },
+              "runAfter": {
+                "Initialize_indexContent": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Update_blob": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azureblob']['connectionId']"
+                  }
+                },
+                "method": "put",
+                "body": "@variables('indexHtml')",
+                "headers": {
+                  "Content-Type": "text/html; charset=utf-8"
+                },
+                "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent('JTJmJTI0d2ViJTJmaW5kZXguaHRtbA=='))}"
+              },
+              "runAfter": {
+                "Initialize_indexHtml": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "JTJmJTI0d2ViJTJmaW5kZXguaHRtbA==": "/$web/index.html"
+              }
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "Recurrence": {
+              "type": "Recurrence",
+              "recurrence": {
+                "frequency": "Day",
+                "interval": 1,
+                "timeZone": "UTC",
+                "startTime": "2019-12-12T23:50:00Z"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azureblob": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('azureblob_Template_Connection_Name'))]",
+                "connectionName": "[parameters('azureblob_Template_Connection_Name')]"
+              },
+              "twitter": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'twitter')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('twitter_Connection_Name'))]",
+                "connectionName": "[parameters('twitter_Connection_Name')]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[parameters('storageAccountName')]",
+        "[resourceId('Microsoft.Web/connections', parameters('azureblob_Template_Connection_Name'))]",
+        "[resourceId('Microsoft.Web/connections', parameters('twitter_Connection_Name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "australiaeast",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2019-04-01",
+      "name": "[concat(parameters('storageAccountName'), '/default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ],
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "cors": {
+          "corsRules": []
+        },
+        "deleteRetentionPolicy": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2019-04-01",
+      "name": "[concat(parameters('storageAccountName'), '/default/$web')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('storageAccountName'), 'default')]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ],
+      "properties": {
+        "publicAccess": "None"
+      }
+    },
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('azureblob_Template_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'azureblob')]"
+        },
+        "displayName": "[parameters('azureblob_Template_Connection_DisplayName')]",
+        "parameterValues": {
+          "accountName": "[parameters('storageAccountName')]",
+          "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[parameters('twitter_Connection_Name')]",
+      "location": "[parameters('logicAppLocation')]",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'twitter')]"
+        },
+        "displayName": "[parameters('twitter_Connection_DisplayName')]"
+      }
+    }
+  ],
+  "outputs": {}
+}
