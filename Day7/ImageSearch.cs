@@ -1,13 +1,12 @@
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using Day7.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Day7.Services;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Day7
 {
@@ -30,12 +29,23 @@ namespace Day7
                 log.LogInformation("C# HTTP trigger function processed a request.");
 
                 string _query = req.Query["query"];
-
-                // Count variable to be used later if more than one image is required
                 int _count = int.TryParse(req.Query["count"], out _count) ? _count : 1;
-                
+
+                var _images = await _imageService.GetImages(_query, _count).ConfigureAwait(false);
+
+                OkObjectResult _result;
+
+                if (_count == 1)
+                {
+                    _result = new OkObjectResult(_images.FirstOrDefault());
+                }
+                else
+                {
+                    _result = new OkObjectResult(_images);
+                }
+
                 return _query != null
-                    ? (ActionResult)new OkObjectResult(await _imageService.GetImage(_query).ConfigureAwait(false))
+                    ? (ActionResult)_result
                     : new BadRequestObjectResult("Please pass a search query on the query string");
             }
             catch(Exception e)

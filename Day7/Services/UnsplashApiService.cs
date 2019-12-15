@@ -22,18 +22,6 @@ namespace Day7.Services
             _unsplashConfig = unsplashConfig;
         }
 
-        public async Task<ImageSearchResponse> GetImage(string keywords)
-        {
-            var _response = await getImages(keywords);
-
-            var _searchResult = JsonConvert
-                .DeserializeObject<UnsplashImage>(
-                    await _response.Content.ReadAsStringAsync().ConfigureAwait(false)
-                );
-
-            return new ImageSearchResponse { Image = _searchResult?.GetImageUri() };
-        }
-
         public async Task<IEnumerable<ImageSearchResponse>> GetImages(string keywords, int count)
         {
             var _response = await getImages(keywords, count);
@@ -46,12 +34,10 @@ namespace Day7.Services
             return _images.Select(i => new ImageSearchResponse { Image = i.GetImageUri() });
         }
 
-        private async Task<HttpResponseMessage> getImages(string keywords, int count = 1)
+        private async Task<HttpResponseMessage> getImages(string keywords, int count)
         {
-            var _requestUri = $"{_unsplashConfig.Value.ApiBaseUrl}photos/random?query={keywords}";
-
-            if (count > 1)
-                _requestUri = $"{_requestUri}&count={Math.Max(count, MAX_COUNT)}";
+            count = count > MAX_COUNT ? MAX_COUNT : count;
+            var _requestUri = $"{_unsplashConfig.Value.ApiBaseUrl}photos/random?query={keywords}&count={count}";
 
             HttpRequestMessage _request = new HttpRequestMessage
             {
