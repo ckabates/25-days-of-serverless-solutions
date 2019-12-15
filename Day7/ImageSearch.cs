@@ -22,7 +22,7 @@ namespace Day7
 
         [FunctionName("ImageSearch")]
         public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "photos")] HttpRequest req,
             ILogger log)
         {
             try
@@ -31,8 +31,11 @@ namespace Day7
 
                 string _query = req.Query["query"];
 
+                // Count variable to be used later if more than one image is required
+                int _count = int.TryParse(req.Query["count"], out _count) ? _count : 1;
+                
                 return _query != null
-                    ? (ActionResult)new OkObjectResult(await _imageService.GetRandomImage(_query).ConfigureAwait(false))
+                    ? (ActionResult)new OkObjectResult(await _imageService.GetImage(_query).ConfigureAwait(false))
                     : new BadRequestObjectResult("Please pass a search query on the query string");
             }
             catch(Exception e)

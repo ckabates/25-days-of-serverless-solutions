@@ -8,6 +8,7 @@ namespace Day7.Services
 {
     public interface IImageApiService
     {
-        Task<ImageSearchResponse> GetRandomImage(string keywords);
+        Task<ImageSearchResponse> GetImage(string keywords);
+        Task<IEnumerable<ImageSearchResponse>> GetImages(string keywords, int count);
     }
 }
