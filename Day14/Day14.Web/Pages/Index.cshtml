@@ -1,0 +1,39 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Chat Room";
+}
+
+    <main role="main" class="inner cover">
+        <div id="welcome">
+            <h1 class="cover-heading">Welcome to the Chat room.</h1>
+            <p class="lead">Enter your handle below and click the "Chat" button to start chatting</p>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="txtHandle" placeholder="User Handle" disabled="disabled">
+                <div class="input-group-append">
+                    <button id="btnChat" class="btn btn-outline-warning" type="button" onclick="setHandle()" disabled="disabled">Chat</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="chatWindow" class="d-none">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="txtMessage" placeholder="Enter your message">
+                <div class="input-group-append">
+                    <button class="btn btn-danger" type="button" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+
+            <hr />
+
+            <ul id="discussion" style="height:600px; margin-bottom:auto; margin-top:0; overflow-y:scroll;">
+            </ul>
+        </div>
+    </main>
+
+@section Scripts
+{
+    <script type="text/javascript">
+        const apiBaseUrl = '@Model.SignalRBaseApiUrl';
+    </script>
+}
